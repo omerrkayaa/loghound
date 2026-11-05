@@ -1,0 +1,29 @@
+[project]
+name = "loghound"
+version = "0.1.0"
+description = "nginx/Apache erişim logları ve sshd auth.log için kural tabanlı saldırı tespit aracı"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Ömer Kaya" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+loghound = "loghound.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["loghound"]
+
+[tool.setuptools.package-data]
+loghound = ["default_rules.toml"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

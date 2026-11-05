@@ -1,0 +1,111 @@
+# loghound varsayılan kuralları.
+# Kendi kural dosyanızı --rules ile verebilirsiniz; biçim aynıdır.
+#
+# type     : pattern | threshold | distinct | followed_by
+# source   : web | ssh
+# kinds    : olay türü süzgeci (ssh: failed, invalid_user, accepted; web: request)
+# status   : HTTP durum kodu süzgeci (yalnız web)
+# field    : pattern/distinct için bakılacak alan (web: target, ua, method; ssh: user)
+# count    : eşik
+# window   : saniye cinsinden pencere
+# Desenler büyük/küçük harf duyarsızdır ve URL kodlaması çözülmüş hedefe uygulanır.
+
+# ---------------------------------------------------------------- web
+
+[[rule]]
+id = "web-sqli"
+title = "SQL injection denemesi"
+severity = "high"
+type = "pattern"
+source = "web"
+field = "target"
+patterns = [
+  '''union(\s|/\*[^*]*\*/)+(all\s+)?select''',
+  ''''\s*(or|and)\s+'?\w+'?\s*=\s*'?\w+''',
+  '''\b(sleep|benchmark|pg_sleep)\s*\(''',
+  ''';\s*(drop|delete|insert|update)\s''',
+  '''information_schema''',
+]
+
+[[rule]]
+id = "web-xss"
+title = "XSS denemesi"
+severity = "medium"
+type = "pattern"
+source = "web"
+field = "target"
+patterns = [
+  '''<\s*script''',
+  '''javascript\s*:''',
+  '''\bon(error|load|mouseover|focus|click)\s*=''',
+  '''document\.cookie''',
+]
+
+[[rule]]
+id = "web-path-traversal"
+title = "Dizin geçişi (path traversal) denemesi"
+severity = "high"
+type = "pattern"
+source = "web"
+field = "target"
+patterns = [
+  '''\.\.[/\\]''',
+  '''/etc/(passwd|shadow)''',
+  '''win\.ini''',
+]
+
+[[rule]]
+id = "web-scanner-ua"
+title = "Bilinen tarama aracı (User-Agent)"
+severity = "medium"
+type = "pattern"
+source = "web"
+field = "ua"
+patterns = [
+  '''sqlmap|nikto|nmap|masscan|gobuster|dirbuster|wpscan|nuclei|zgrab|ffuf|feroxbuster|hydra''',
+]
+
+[[rule]]
+id = "web-404-burst"
+title = "Dizin/dosya taraması (404 patlaması)"
+severity = "medium"
+type = "threshold"
+source = "web"
+status = [404]
+count = 20
+window = 60
+
+# ---------------------------------------------------------------- ssh
+
+[[rule]]
+id = "ssh-brute-force"
+title = "SSH kaba kuvvet (brute force)"
+severity = "high"
+type = "threshold"
+source = "ssh"
+kinds = ["failed"]
+count = 5
+window = 60
+
+[[rule]]
+id = "ssh-user-enum"
+title = "SSH kullanıcı adı taraması"
+severity = "medium"
+type = "distinct"
+source = "ssh"
+kinds = ["failed", "invalid_user"]
+invalid_only = true
+field = "user"
+count = 5
+window = 300
+
+[[rule]]
+id = "ssh-success-after-failures"
+title = "Başarısız denemelerden sonra başarılı SSH girişi"
+severity = "critical"
+type = "followed_by"
+source = "ssh"
+kinds = ["failed"]
+then_kinds = ["accepted"]
+count = 5
+window = 600
